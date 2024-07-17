@@ -23,8 +23,8 @@ Un gestionnaire de mots de passe sécurisé, portable et facile à utiliser, con
 1. Clonez ce dépôt ou téléchargez le fichier `password_manager.py` sur votre clé USB.
 
 2. Installez les dépendances nécessaires :
-pip install cryptography
-Copy
+Lancer le start.BAT
+
 ## Utilisation
 
 1. Connectez votre clé USB à l'ordinateur.
