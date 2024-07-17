@@ -2,6 +2,10 @@
 
 Un gestionnaire de mots de passe portable, sécurisé et facile à utiliser, conçu pour être stocké sur une clé USB.
 
+
+![image](https://github.com/user-attachments/assets/fd06e27b-9d50-4f92-8f7c-8e382fd7f473)
+
+
 ## ✨ Caractéristiques
 
 - 🛡️ Stockage sécurisé des mots de passe avec chiffrement
