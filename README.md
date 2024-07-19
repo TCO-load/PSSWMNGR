@@ -11,7 +11,7 @@ Un gestionnaire de mots de passe portable, sécurisé et facile à utiliser, con
 - 🛡️ Stockage sécurisé des mots de passe avec chiffrement
 - 🎲 Génération de mots de passe aléatoires robustes
 - 🔑 Protection par mot de passe maître
-- 🌈 Interface colorée personnalisable
+- 🌈 Interface colorée
 - ⏰ Avertissement pour les mots de passe de plus de 6 mois
 - 💾 Portable et facile à utiliser sur n'importe quel ordinateur avec Python
 
@@ -40,7 +40,7 @@ start PSWD.bat
 - 🔄 Mettre à jour un mot de passe
 - 🗑️ Supprimer un mot de passe
 - 🔑 Changer le mot de passe maître
-- 🎨 Personnaliser la couleur de l'interface
+
 
 ## 🔒 Sécurité
 
