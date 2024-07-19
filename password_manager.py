@@ -8,38 +8,14 @@ import base64
 import time
 import uuid
 import platform
+import shutil
 from datetime import datetime, timedelta
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from colorama import Fore, Style, init
 
-def purple(text):
-    return f"\033[95m{text}\033[0m"
-
-def green(text):
-    return f"\033[92m{text}\033[0m"
-
-def blue(text):
-    return f"\033[94m{text}\033[0m"
-
-def orange(text):
-    return f"\033[93m{text}\033[0m"
-
-def pink(text):
-    return f"\033[95m{text}\033[0m"
-
-def white(text):
-    return f"\033[97m{text}\033[0m"
-def get_usb_path():
-    if platform.system() == "Windows":
-        drive = input("Entrez la lettre du lecteur USB (ex: D): ")
-        return f"{drive}:\\"  # Retourne le chemin complet, par exemple "D:\"
-    elif platform.system() == "Linux":
-        return input("Entrez le point de montage USB (ex: /media/username/USB_NAME): ")
-    elif platform.system() == "Darwin":  # macOS
-        return input("Entrez le chemin de la clé USB (ex: /Volumes/USB_NAME): ")
-    else:
-        raise NotImplementedError("Système d'exploitation non supporté")
+init(autoreset=True)
 
 class PasswordManager:
     def __init__(self, usb_path):
@@ -48,42 +24,59 @@ class PasswordManager:
         self.master_file = os.path.join(usb_path, "master.json")
         self.id_file = os.path.join(usb_path, ".usb_id")
         self.key = None
-        self.color_func = orange  # Couleur par défaut
+        self.terminal_width = shutil.get_terminal_size().columns
 
-    def clear_console(self):
+    def clear_screen(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    def print_header(self, title):
-        self.clear_console()
-        print("=" * 50)
-        print(self.color_func(f"{title:^50}"))
-        print("=" * 50)
+    def center_text(self, text):
+        return text.center(self.terminal_width)
+
+    def print_centered(self, text, color=Fore.WHITE):
+        print(color + self.center_text(text) + Style.RESET_ALL)
+
+    def print_banner(self):
+        banner = '''
+    /$$$$$$$   /$$$$$$   /$$$$$$  /$$      /$$/$$$$$$$  
+    | $$__  $$ /$$__  $$ /$$__  $$| $$  /$ | $| $$__  $$ 
+    | $$  \ $$| $$  \__/| $$  \__/| $$ /$$$| $| $$  \ $$ 
+    | $$$$$$$/|  $$$$$$ |  $$$$$$ | $$/$$ $$ $| $$  | $$ 
+    | $$____/  \____  $$ \____  $$| $$$$_  $$$| $$  | $$ 
+    | $$       /$$  \ $$ /$$  \ $$| $$$/ \  $$| $$  | $$ 
+   | $$      |  $$$$$$/|  $$$$$$/| $$/   \  $| $$$$$$$/
+   |__/       \______/  \______/ |__/     \__|_______/ 
+    '''
+        for line in banner.split('\n'):
+            self.print_centered(line, Fore.RED)
+        self.print_centered("Gestionnaire de Mots de Passe Sécurisé", Fore.CYAN)
+        self.print_centered("=" * 45, Fore.YELLOW)
+
+    def print_menu(self, title, options):
+        self.clear_screen()
+        self.print_banner()
         print()
+        self.print_centered(title, Fore.CYAN + Style.BRIGHT)
+        self.print_centered("=" * (len(title) + 4), Fore.YELLOW)
+        for i, option in enumerate(options, 1):
+            self.print_centered(f"{i}. {option}", Fore.GREEN)
+        self.print_centered("=" * (len(title) + 4), Fore.YELLOW)
 
-    def wait_for_user(self):
-        input(self.color_func("\nAppuyez sur Entrée pour continuer..."))
+    def get_user_input(self, prompt):
+        return input(prompt)
 
-    def show_banner(self):
-            banner = f"""
-    ╔═══════════════════════════════════════════════════════════════════════╗
-    ║                                                                       ║
-    ║   /$$$$$$$   /$$$$$$   /$$$$$$  /$$      /$$/$$$$$$$                  ║
-    ║  | $$__  $$ /$$__  $$ /$$__  $$| $$  /$ | $| $$__  $$                 ║
-    ║  | $$  \ $$| $$  \__/| $$  \__/| $$ /$$$| $| $$  \ $$                 ║
-    ║  | $$$$$$$/|  $$$$$$ |  $$$$$$ | $$/$$ $$ $| $$  | $$                 ║
-    ║  | $$____/  \____  $$ \____  $$| $$$$_  $$$| $$  | $$                 ║
-    ║  | $$       /$$  \ $$ /$$  \ $$| $$$/ \  $$| $$  | $$                 ║
-    ║  | $$      |  $$$$$$/|  $$$$$$/| $$/   \  $| $$$$$$$/                 ║
-    ║  |__/       \______/  \______/ |__/     \__|_______/                  ║
-    ║                                                                       ║
-    ║               Gestionnaire de Mots de Passe Sécurisé                  ║
-    ║                                                                       ║
-    ║  [>] Running with Python {sys.version_info[0]}.{sys.version_info[1]}.{sys.version_info[2]}                                       ║
-    ║  [>] GITHUB : TCO-load                                                ║
-    ║                                                                       ║
-    ╚═══════════════════════════════════════════════════════════════════════╝
-    """
-            print(self.color_func(banner))
+    def get_password(self, prompt):
+        return getpass.getpass(prompt)
+
+    def get_user_choice(self, max_choice):
+        while True:
+            try:
+                choice = int(self.get_user_input(f"{Fore.CYAN}Choisissez une option (1-{max_choice}): {Style.RESET_ALL}"))
+                if 1 <= choice <= max_choice:
+                    return choice
+                else:
+                    self.print_centered(f"Choix invalide. Veuillez entrer un nombre entre 1 et {max_choice}.", Fore.RED)
+            except ValueError:
+                self.print_centered("Entrée invalide. Veuillez entrer un nombre.", Fore.RED)
 
     def initialize(self):
         if not os.path.exists(self.id_file):
@@ -94,8 +87,8 @@ class PasswordManager:
             self.usb_id = f.read().strip()
 
         if not os.path.exists(self.master_file):
-            self.print_header("Initialisation du gestionnaire de mots de passe")
-            master_password = getpass.getpass(self.color_func("Créez un mot de passe maître: "))
+            self.print_centered("Initialisation du gestionnaire de mots de passe", Fore.CYAN)
+            master_password = self.get_password(f"{Fore.GREEN}Créez un mot de passe maître: {Style.RESET_ALL}")
             salt = os.urandom(16)
             key = self.derive_key(master_password, salt)
             
@@ -107,15 +100,15 @@ class PasswordManager:
             with open(self.master_file, 'w') as f:
                 json.dump(master_data, f)
             
-            print(self.color_func("Gestionnaire de mots de passe initialisé avec succès."))
-            self.wait_for_user()
+            self.print_centered("Gestionnaire de mots de passe initialisé avec succès.", Fore.GREEN)
+            self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
         else:
-            print(self.color_func("Gestionnaire de mots de passe déjà initialisé."))
+            self.print_centered("Gestionnaire de mots de passe déjà initialisé.", Fore.YELLOW)
 
     def login(self):
-        self.print_header("Connexion")
+        self.print_centered("Connexion", Fore.CYAN)
         if not os.path.exists(self.master_file):
-            print(self.color_func("Le gestionnaire de mots de passe n'est pas initialisé."))
+            self.print_centered("Le gestionnaire de mots de passe n'est pas initialisé.", Fore.RED)
             return False
 
         with open(self.master_file, 'r') as f:
@@ -124,15 +117,15 @@ class PasswordManager:
         salt = base64.b64decode(master_data['salt'])
         stored_verifier = base64.b64decode(master_data['verifier'])
 
-        master_password = getpass.getpass(self.color_func("Entrez votre mot de passe maître: "))
+        master_password = self.get_password(f"{Fore.GREEN}Entrez votre mot de passe maître: {Style.RESET_ALL}")
         key = self.derive_key(master_password, salt)
         
         if hashlib.sha256(key).digest() == stored_verifier:
             self.key = key
             return True
         else:
-            print(self.color_func("Mot de passe maître incorrect."))
-            self.wait_for_user()
+            self.print_centered("Mot de passe maître incorrect.", Fore.RED)
+            self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
             return False
 
     def show_animation(self):
@@ -145,19 +138,17 @@ class PasswordManager:
             "Fait par Titouan Corni", "Fait par Titouan Cornil",
             "Fait par Titouan Cornill", "Fait par Titouan Cornille",
         ]
-
         for frame in frames:
-            self.clear_console()
+            self.clear_screen()
             print("\n" * 10)
-            print(self.color_func(frame.center(50)))
+            self.print_centered(frame, Fore.CYAN)
             time.sleep(0.1)
             
         time.sleep(1)
-        self.clear_console()
-        self.show_banner()
+        self.clear_screen()
+        self.print_banner()
         time.sleep(4)
-        
-        
+
     def derive_key(self, password, salt):
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -168,9 +159,9 @@ class PasswordManager:
         return base64.urlsafe_b64encode(kdf.derive(password.encode()))
 
     def add_password(self):
-        self.print_header("Ajouter un mot de passe")
-        platform = input(self.color_func("Nom de la plateforme: "))
-        password = getpass.getpass(self.color_func("Mot de passe: "))
+        self.print_menu("Ajouter un mot de passe", [])
+        platform = self.get_user_input(f"{Fore.GREEN}Nom de la plateforme: {Style.RESET_ALL}")
+        password = self.get_password(f"{Fore.GREEN}Mot de passe: {Style.RESET_ALL}")
         
         passwords = self.load_passwords()
         passwords[platform] = {
@@ -178,73 +169,73 @@ class PasswordManager:
             "date": datetime.now().isoformat()
         }
         self.save_passwords(passwords)
-        print(self.color_func(f"Mot de passe pour {platform} ajouté avec succès."))
-        self.wait_for_user()
+        self.print_centered(f"Mot de passe pour {platform} ajouté avec succès.", Fore.GREEN)
+        self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
 
     def generate_password(self):
-        self.print_header("Générer un mot de passe aléatoire")
-        length = int(input(self.color_func("Longueur du mot de passe (8-32): ")))
+        self.print_menu("Générer un mot de passe aléatoire", [])
+        length = int(self.get_user_input(f"{Fore.GREEN}Longueur du mot de passe (8-32): {Style.RESET_ALL}"))
         length = max(8, min(length, 32))
         password = ''.join(secrets.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=') for _ in range(length))
-        print(self.color_func(f"Mot de passe généré: {password}"))
+        self.print_centered(f"Mot de passe généré: {password}", Fore.YELLOW)
         
-        save = input(self.color_func("Voulez-vous sauvegarder ce mot de passe? (o/n): ")).lower()
+        save = self.get_user_input(f"{Fore.GREEN}Voulez-vous sauvegarder ce mot de passe? (o/n): {Style.RESET_ALL}").lower()
         if save == 'o':
-            platform = input(self.color_func("Nom de la plateforme: "))
+            platform = self.get_user_input(f"{Fore.GREEN}Nom de la plateforme: {Style.RESET_ALL}")
             passwords = self.load_passwords()
             passwords[platform] = {
                 "password": password,
                 "date": datetime.now().isoformat()
             }
             self.save_passwords(passwords)
-            print(self.color_func(f"Mot de passe pour {platform} sauvegardé avec succès."))
-        self.wait_for_user()
+            self.print_centered(f"Mot de passe pour {platform} sauvegardé avec succès.", Fore.GREEN)
+        self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
 
     def view_password(self):
-        self.print_header("Voir un mot de passe")
+        self.print_menu("Voir un mot de passe", [])
         self.list_platforms()
         print("\n")
-        platform = input(self.color_func("Entrez le nom de la plateforme (ou 'q' pour quitter): "))
+        platform = self.get_user_input(f"{Fore.GREEN}Entrez le nom de la plateforme (ou 'q' pour quitter): {Style.RESET_ALL}")
         if platform.lower() == 'q':
             return
 
         passwords = self.load_passwords()
         if platform in passwords:
-            print(self.color_func(f"\nPlateforme: {platform}"))
-            print(self.color_func(f"Mot de passe: {passwords[platform]['password']}"))
-            print(self.color_func(f"Date d'ajout: {passwords[platform]['date']}"))
+            self.print_centered(f"Plateforme: {platform}", Fore.YELLOW)
+            self.print_centered(f"Mot de passe: {passwords[platform]['password']}", Fore.YELLOW)
+            self.print_centered(f"Date d'ajout: {passwords[platform]['date']}", Fore.YELLOW)
         
             date_added = datetime.fromisoformat(passwords[platform]['date'])
             if datetime.now() - date_added > timedelta(days=180):
-                print(self.color_func("ATTENTION: Ce mot de passe a plus de 6 mois."))
-                update = input(self.color_func("Voulez-vous le mettre à jour? (o/n): ")).lower()
+                self.print_centered("ATTENTION: Ce mot de passe a plus de 6 mois.", Fore.RED)
+                update = self.get_user_input(f"{Fore.GREEN}Voulez-vous le mettre à jour? (o/n): {Style.RESET_ALL}").lower()
                 if update == 'o':
                     self.update_password(platform)
         else:
-            print(self.color_func("Plateforme non trouvée."))
-        self.wait_for_user()
-        
+            self.print_centered("Plateforme non trouvée.", Fore.RED)
+        self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
+
     def update_password(self, platform=None):
-        self.print_header("Mettre à jour un mot de passe")
+        self.print_menu("Mettre à jour un mot de passe", [])
         if platform is None:
-            platform = input(self.color_func("Nom de la plateforme à mettre à jour: "))
+            platform = self.get_user_input(f"{Fore.GREEN}Nom de la plateforme à mettre à jour: {Style.RESET_ALL}")
         
         passwords = self.load_passwords()
         if platform in passwords:
-            new_password = getpass.getpass(self.color_func("Nouveau mot de passe: "))
+            new_password = self.get_password(f"{Fore.GREEN}Nouveau mot de passe: {Style.RESET_ALL}")
             passwords[platform] = {
                 "password": new_password,
                 "date": datetime.now().isoformat()
             }
             self.save_passwords(passwords)
-            print(self.color_func(f"Mot de passe pour {platform} mis à jour avec succès."))
+            self.print_centered(f"Mot de passe pour {platform} mis à jour avec succès.", Fore.GREEN)
         else:
-            print(self.color_func("Plateforme non trouvée."))
-        self.wait_for_user()
+            self.print_centered("Plateforme non trouvée.", Fore.RED)
+        self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
 
     def change_master_password(self):
-        self.print_header("Changer le mot de passe maître")
-        current_password = getpass.getpass(self.color_func("Entrez votre mot de passe maître actuel: "))
+        self.print_menu("Changer le mot de passe maître", [])
+        current_password = self.get_password(f"{Fore.GREEN}Entrez votre mot de passe maître actuel: {Style.RESET_ALL}")
         with open(self.master_file, 'r') as f:
             master_data = json.load(f)
         
@@ -252,16 +243,16 @@ class PasswordManager:
         stored_verifier = base64.b64decode(master_data['verifier'])
         
         if hashlib.sha256(self.derive_key(current_password, salt)).digest() != stored_verifier:
-            print(self.color_func("Mot de passe maître incorrect."))
-            self.wait_for_user()
+            self.print_centered("Mot de passe maître incorrect.", Fore.RED)
+            self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
             return
         
-        new_password = getpass.getpass(self.color_func("Nouveau mot de passe maître: "))
-        confirm_password = getpass.getpass(self.color_func("Confirmez le nouveau mot de passe maître: "))
+        new_password = self.get_password(f"{Fore.GREEN}Nouveau mot de passe maître: {Style.RESET_ALL}")
+        confirm_password = self.get_password(f"{Fore.GREEN}Confirmez le nouveau mot de passe maître: {Style.RESET_ALL}")
         
         if new_password != confirm_password:
-            print(self.color_func("Les mots de passe ne correspondent pas."))
-            self.wait_for_user()
+            self.print_centered("Les mots de passe ne correspondent pas.", Fore.RED)
+            self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
             return
         
         new_salt = os.urandom(16)
@@ -276,8 +267,8 @@ class PasswordManager:
             json.dump(new_master_data, f)
         
         self.key = new_key
-        print(self.color_func("Mot de passe maître changé avec succès."))
-        self.wait_for_user()
+        self.print_centered("Mot de passe maître changé avec succès.", Fore.GREEN)
+        self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
 
     def load_passwords(self):
         if not os.path.exists(self.passwords_file):
@@ -300,119 +291,92 @@ class PasswordManager:
     def list_platforms(self):
         passwords = self.load_passwords()
         if not passwords:
-            print(self.color_func("Aucune plateforme enregistrée."))
+            self.print_centered("Aucune plateforme enregistrée.", Fore.YELLOW)
         else:
-            print(self.color_func("Plateformes enregistrées :"))
+            self.print_centered("Plateformes enregistrées :", Fore.CYAN)
             for platform, data in passwords.items():
                 date_added = datetime.fromisoformat(data['date'])
                 days_old = (datetime.now() - date_added).days
-                print(self.color_func(f"- {platform} (ajouté il y a {days_old} jours)"))
+                self.print_centered(f"- {platform} (ajouté il y a {days_old} jours)", Fore.GREEN)
                 if days_old > 180:
-                    print(self.color_func("  ATTENTION: Ce mot de passe a plus de 6 mois."))
-        print(self.color_func(f"\nTotal: {len(passwords)} plateforme(s)"))
+                    self.print_centered("  ATTENTION: Ce mot de passe a plus de 6 mois.", Fore.RED)
+        self.print_centered(f"\nTotal: {len(passwords)} plateforme(s)", Fore.YELLOW)
 
-    def change_color(self):
-        self.print_header("Changer la couleur du texte")
-        print(orange("1. Orange (par défaut)"))
-        print(green("2. Vert"))
-        print(blue("3. Bleu"))
-        print(white("4. Blanc"))
-        print(pink("5. Rose"))
-        print(purple("6. Violet"))
-        
-        choice = input(self.color_func("Choisissez une couleur (1-6): "))
-        
-        if choice == '1':
-            self.color_func = orange
-        elif choice == '2':
-            self.color_func = green
-        elif choice == '3':
-            self.color_func = blue
-        elif choice == '4':
-            self.color_func = white
-        elif choice == '5':
-            self.color_func = pink
-        elif choice == '6':
-            self.color_func = purple
-        else:
-            print(self.color_func("Choix invalide. La couleur reste inchangée."))
-        
-        print(self.color_func("Couleur changée avec succès."))
-        self.wait_for_user()
-        
     def delete_password(self):
-        self.print_header("Supprimer un mot de passe")
+        self.print_menu("Supprimer un mot de passe", [])
         self.list_platforms()
         print("\n")
-        platform = input(self.color_func("Entrez le nom de la plateforme à supprimer (ou 'q' pour quitter): "))
+        platform = self.get_user_input(f"{Fore.GREEN}Entrez le nom de la plateforme à supprimer (ou 'q' pour quitter): {Style.RESET_ALL}")
         if platform.lower() == 'q':
             return
 
         passwords = self.load_passwords()
         if platform in passwords:
-            confirm = input(self.color_func(f"Êtes-vous sûr de vouloir supprimer le mot de passe pour {platform}? (o/n): ")).lower()
+            confirm = self.get_user_input(f"{Fore.YELLOW}Êtes-vous sûr de vouloir supprimer le mot de passe pour {platform}? (o/n): {Style.RESET_ALL}").lower()
             if confirm == 'o':
                 del passwords[platform]
                 self.save_passwords(passwords)
-                print(self.color_func(f"Mot de passe pour {platform} supprimé avec succès."))
+                self.print_centered(f"Mot de passe pour {platform} supprimé avec succès.", Fore.GREEN)
             else:
-                print(self.color_func("Suppression annulée."))
+                self.print_centered("Suppression annulée.", Fore.YELLOW)
         else:
-            print(self.color_func("Plateforme non trouvée."))
-        self.wait_for_user()
+            self.print_centered("Plateforme non trouvée.", Fore.RED)
+        self.get_user_input(f"{Fore.CYAN}Appuyez sur Entrée pour continuer...{Style.RESET_ALL}")
 
-def main():
+    def run(self):
+        self.initialize()
+        self.show_animation()
+        
+        if not self.login():
+            self.print_centered("Échec de l'authentification. Au revoir!", Fore.RED)
+            return
+        
+        while True:
+            options = [
+                "Ajouter un mot de passe",
+                "Générer un mot de passe aléatoire",
+                "Voir un mot de passe",
+                "Mettre à jour un mot de passe",
+                "Supprimer un mot de passe",
+                "Changer le mot de passe maître",
+                "Quitter"
+            ]
+            self.print_menu("Menu Principal", options)
+            choice = self.get_user_choice(len(options))
+            
+            if choice == 1:
+                self.add_password()
+            elif choice == 2:
+                self.generate_password()
+            elif choice == 3:
+                self.view_password()
+            elif choice == 4:
+                self.update_password()
+            elif choice == 5:
+                self.delete_password()
+            elif choice == 6:
+                self.change_master_password()
+            elif choice == 7:
+                self.clear_screen()
+                self.print_centered("Merci d'avoir utilisé le gestionnaire de mots de passe. Au revoir!", Fore.YELLOW)
+                break
+
+def get_usb_path():
+    if platform.system() == "Windows":
+        drive = input("Entrez la lettre du lecteur USB (ex: D): ")
+        return f"{drive}:\\"
+    elif platform.system() == "Linux":
+        return input("Entrez le point de montage USB (ex: /media/username/USB_NAME): ")
+    elif platform.system() == "Darwin":  # macOS
+        return input("Entrez le chemin de la clé USB (ex: /Volumes/USB_NAME): ")
+    else:
+        raise NotImplementedError("Système d'exploitation non supporté")
+
+if __name__ == "__main__":
     usb_path = get_usb_path()
     
     if not os.path.exists(usb_path):
-        print(orange("Chemin USB non valide. Veuillez vérifier votre clé USB."))
-        return
-    
-    pm = PasswordManager(usb_path)
-    
-    pm.initialize()
-    pm.show_animation()
-    
-    if not pm.login():
-        print(pm.color_func("Échec de l'authentification. Au revoir!"))
-        return
-    
-    while True:
-        pm.clear_console()
-        pm.show_banner()
-        print(pm.color_func("[1]. Ajouter un mot de passe"))
-        print(pm.color_func("[2]. Générer un mot de passe aléatoire"))
-        print(pm.color_func("[3]. Voir un mot de passe"))
-        print(pm.color_func("[4]. Mettre à jour un mot de passe"))
-        print(pm.color_func("[5]. Supprimer un mot de passe"))
-        print(pm.color_func("[6]. Changer le mot de passe maître"))
-        print(pm.color_func("[7]. Changer la couleur du texte"))
-        print(pm.color_func("[8]. Quitter"))
-        print()
-        
-        choice = input(pm.color_func("Choisissez une option (1-8): "))
-        
-        if choice == '1':
-            pm.add_password()
-        elif choice == '2':
-            pm.generate_password()
-        elif choice == '3':
-            pm.view_password()
-        elif choice == '4':
-            pm.update_password()
-        elif choice == '5':
-            pm.delete_password()
-        elif choice == '6':
-            pm.change_master_password()
-        elif choice == '7':
-            pm.change_color()
-        elif choice == '8':
-            pm.clear_console()
-            print(pm.color_func("Merci d'avoir utilisé le gestionnaire de mots de passe. Au revoir!"))
-            break
-        else:
-            print(pm.color_func("Option invalide. Veuillez réessayer."))
-            pm.wait_for_user()
-
-if __name__ == "__main__":
-    main()
+        print(Fore.RED + "Chemin USB non valide. Veuillez vérifier votre clé USB." + Style.RESET_ALL)
+    else:
+        pm = PasswordManager(usb_path)
+        pm.run()
