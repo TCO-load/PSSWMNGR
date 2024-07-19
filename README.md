@@ -2,8 +2,8 @@
 
 Un gestionnaire de mots de passe portable, sécurisé et facile à utiliser, conçu pour être stocké sur une clé USB.
 
+![psswd](https://github.com/user-attachments/assets/33c87a75-9507-4d6c-8ff2-a6ee7a5eacfd)
 
-![image](https://github.com/user-attachments/assets/fd06e27b-9d50-4f92-8f7c-8e382fd7f473)
 
 
 ## ✨ Caractéristiques
